@@ -1,6 +1,12 @@
 <?xml version="1.0" ?>
 <sdf version="1.8"> <!--xmlとsdfのバージョン定義-->
     <world name="WorldDemo"> <!--ワールドの内容は全てこのタグの中に-->
+    <plugin filename="ignition-gazebo-physics-system" name="ignition::gazebo::systems::Physics"/>
+    <plugin filename="ignition-gazebo-user-commands-system" name="ignition::gazebo::systems::UserCommands"/>
+    <plugin filename="ignition-gazebo-scene-broadcaster-system" name="ignition::gazebo::systems::SceneBroadcaster"/>
+    <plugin filename="ignition-gazebo-sensors-system" name="ignition::gazebo::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
         <physics name="1ms" type="ignored">
             <max_step_size>0.001</max_step_size> <!--最大何秒ごとにシミュレートするか（小さいほど正確なシミュレーションになる）-->
             <real_time_factor>1.0</real_time_factor> <!--現実時間との比率-->
@@ -319,5 +325,42 @@
             <topic>cmd_vel</topic>
           </plugin>
         </model>
+    <!-- ===== ソフトボール（半径5cm・180g・黄色） ===== -->
+    <model name="softball">
+      <pose>1.5 0.8 0.05 0 0 0</pose>
+      <link name="link">
+        <inertial>
+          <mass>0.18</mass>
+          <inertia>
+            <ixx>0.00018</ixx><iyy>0.00018</iyy><izz>0.00018</izz>
+            <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz>
+          </inertia>
+        </inertial>
+        <collision name="collision">
+          <geometry><sphere><radius>0.05</radius></sphere></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><sphere><radius>0.05</radius></sphere></geometry>
+          <material>
+            <ambient>1 0.9 0 1</ambient>
+            <diffuse>1 0.9 0 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <!-- ===== 回収エリア（地面に置いた緑の板。当たり判定なし） ===== -->
+    <model name="collection_area">
+      <static>true</static>
+      <pose>3.0 0 0.002 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry><box><size>0.8 0.8 0.004</size></box></geometry>
+          <material>
+            <ambient>0 0.6 0.2 1</ambient>
+            <diffuse>0 0.6 0.2 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
     </world>
 </sdf>
