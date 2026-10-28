@@ -34,6 +34,7 @@ lidar_node src/lidar_node.cpp
 
 install(PROGRAMS
   scripts/softball_detector.py
+  scripts/softball_collector.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

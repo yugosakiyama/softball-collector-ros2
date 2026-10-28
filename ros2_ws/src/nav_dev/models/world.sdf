@@ -346,8 +346,12 @@
         </model>
     <!-- ===== ソフトボール（半径5cm・180g・黄色） ===== -->
     <model name="softball">
-      <pose>1.5 0.8 0.05 0 0 0</pose>
+      <pose>1.5 0.4 0.05 0 0 0</pose>
       <link name="link">
+        <velocity_decay>
+          <linear>1.0</linear>
+          <angular>3.0</angular>
+        </velocity_decay>
         <inertial>
           <mass>0.18</mass>
           <inertia>
@@ -357,6 +361,14 @@
         </inertial>
         <collision name="collision">
           <geometry><sphere><radius>0.05</radius></sphere></geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>2.0</mu>
+                <mu2>2.0</mu2>
+              </ode>
+            </friction>
+          </surface>
         </collision>
         <visual name="visual">
           <geometry><sphere><radius>0.05</radius></sphere></geometry>
