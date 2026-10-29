@@ -50,9 +50,9 @@ BALL_REF = (1.5, 0.4)  # 較正ログ用のボール実位置（制御には使�
 
 # ===== 探索・接近 =====
 
-SEARCH_W = 0.3
+SEARCH_W = 0.30
 
-APPROACH_V = 0.06
+APPROACH_V = 0.16
 
 TURN_GAIN = 0.004
 
@@ -68,9 +68,13 @@ GOAL_X, GOAL_Y = 3.0, 0.0
 
 STAGE_DIST = 0.45      # ボール中心の何m後方に回り込むか
 
+LINE_TOL = 0.03
+
+BEHIND_TOL = 0.05
+
 STAGE_TOL = 0.10
 
-MOVE_V = 0.10
+MOVE_V = 0.28
 
 ALIGN_TOL = 0.05       # [rad]
 
@@ -78,7 +82,7 @@ ALIGN_TOL = 0.05       # [rad]
 
 # ===== 押し運び =====
 
-PUSH_V = 0.04
+PUSH_V = 0.20
 
 PUSH_HEAD_GAIN = 0.8
 
@@ -170,6 +174,10 @@ class SoftballCollector(Node):
         self.stage = None
 
         self.done_time = None
+
+        self.done_x = None
+
+        self.done_y = None
 
         self.get_logger().info('Softball collector started: SEARCH')
 
@@ -458,33 +466,129 @@ class SoftballCollector(Node):
 
         elif self.state == 'GO_STAGE':
 
-            sx, sy = self.stage
+            if (
 
-            dx, dy = sx - self.x, sy - self.y
+                self.ball_x is None
+
+                or self.ball_y is None
+
+                or self.x is None
+
+                or self.y is None
+
+                or self.yaw is None
+
+            ):
+
+                return
+
+            bx = self.ball_x
+
+            by = self.ball_y
+
+            # Unit vector from the ball toward the goal.
+
+            gx = GOAL_X - bx
+
+            gy = GOAL_Y - by
+
+            norm = math.hypot(gx, gy)
+
+            if norm < 0.001:
+
+                return
+
+            ux = gx / norm
+
+            uy = gy / norm
+
+            # Vector from the ball to the robot.
+
+            rx = self.x - bx
+
+            ry = self.y - by
+
+            # Positive / negative shows which side of the line the robot is on.
+
+            lateral = -uy * rx + ux * ry
+
+            # Positive value means the robot is behind the ball.
+
+            behind = -(ux * rx + uy * ry)
+
+            line_ok = abs(lateral) < LINE_TOL
+
+            behind_ok = abs(behind - STAGE_DIST) < BEHIND_TOL
+
+            # Move to the exact point 0.45 m behind the ball.
+
+            target_x = bx - STAGE_DIST * ux
+
+            target_y = by - STAGE_DIST * uy
+
+            dx = target_x - self.x
+
+            dy = target_y - self.y
 
             dist = math.hypot(dx, dy)
 
-            e = angle_diff(math.atan2(dy, dx), self.yaw)
+            # Do not proceed until both geometric conditions are satisfied.
 
-            # arrived, or passed the stage point while close
+            if line_ok and behind_ok:
 
-            if dist < STAGE_TOL or (dist < 0.20 and abs(e) > 1.2):
+                self.get_logger().info(
+
+                    f'stage ready: lateral={lateral:+.3f} '
+
+                    f'behind={behind:.3f}'
+
+                )
 
                 self.set_state('ALIGN')
 
-            elif dist > 0.20 and abs(e) > 0.35:
-
-                # far and facing wrong way: rotate in place
-
-                cmd.angular.z = clamp(1.0 * e, -0.4, 0.4)
-
             else:
 
-                # drive forward with gentle steering
+                target_heading = math.atan2(dy, dx)
 
-                cmd.angular.z = clamp(0.8 * e, -0.2, 0.2)
+                e = angle_diff(target_heading, self.yaw)
 
-                cmd.linear.x = clamp(0.6 * dist, 0.04, MOVE_V)
+                # First turn toward the target point.
+
+                if abs(e) > 0.30:
+
+                    cmd.angular.z = clamp(
+
+                        1.0 * e,
+
+                        -0.35,
+
+                        0.35
+
+                    )
+
+                # Then move toward it with gentle steering.
+
+                else:
+
+                    cmd.angular.z = clamp(
+
+                        0.8 * e,
+
+                        -0.15,
+
+                        0.15
+
+                    )
+
+                    cmd.linear.x = clamp(
+
+                        0.5 * dist,
+
+                        0.015,
+
+                        MOVE_V
+
+                    )
 
  
 
@@ -530,7 +634,55 @@ class SoftballCollector(Node):
 
                 if abs(e) < ALIGN_TOL:
 
-                    self.set_state('PUSH')
+                    # Re-check the robot position after turning.
+
+                    gx = GOAL_X - self.ball_x
+
+                    gy = GOAL_Y - self.ball_y
+
+                    norm = math.hypot(gx, gy)
+
+                    if norm < 0.001:
+
+                        return
+
+                    ux = gx / norm
+
+                    uy = gy / norm
+
+                    rx = self.x - self.ball_x
+
+                    ry = self.y - self.ball_y
+
+                    lateral = -uy * rx + ux * ry
+
+                    behind = -(ux * rx + uy * ry)
+
+                    line_ok = abs(lateral) < LINE_TOL
+
+                    behind_ok = (
+
+                        abs(behind - STAGE_DIST) < BEHIND_TOL
+
+                    )
+
+                    self.get_logger().info(
+
+                        f'align check: lateral={lateral:+.3f} '
+
+                        f'behind={behind:.3f}'
+
+                    )
+
+                    if line_ok and behind_ok:
+
+                        self.set_state('PUSH')
+
+                    else:
+
+                        # Turning shifted the robot away from the line.
+
+                        self.set_state('GO_STAGE')
 
                 else:
 
@@ -538,11 +690,11 @@ class SoftballCollector(Node):
 
                     cmd.angular.z = clamp(
 
-                        1.0 * e,
+                        1.5 * e,
 
-                        -0.25,
+                        -0.40,
 
-                        0.25
+                        0.40
 
                     )
 
@@ -560,13 +712,17 @@ class SoftballCollector(Node):
 
             # done: ball near the center of the goal area
 
-            if to_goal < 0.40:
+            if to_goal < 0.20:
 
                 self.get_logger().info(
 
                     f'ball in goal: ({bx:.2f}, {by:.2f})')
 
                 self.done_time = now
+
+                self.done_x = self.x
+
+                self.done_y = self.y
 
                 self.set_state('DONE')
 
@@ -606,9 +762,19 @@ class SoftballCollector(Node):
 
                     if abs(err) < 0.25:
 
-                        # slow down near the goal
+                        # Slow down gently near the goal.
 
-                        cmd.linear.x = PUSH_V if to_goal > 0.8 else 0.025
+                        if to_goal > 0.60:
+
+                            cmd.linear.x = PUSH_V
+
+                        elif to_goal > 0.30:
+
+                            cmd.linear.x = 0.14
+
+                        else:
+
+                            cmd.linear.x = 0.10
 
  
 
@@ -636,9 +802,37 @@ class SoftballCollector(Node):
 
         elif self.state == 'DONE':
 
-            if now - self.done_time < 1.5:
+            if (
 
-                cmd.linear.x = -0.08
+                self.done_x is None
+
+                or self.done_y is None
+
+            ):
+
+                return
+
+            # Distance traveled since entering DONE.
+
+            retreat_dist = math.hypot(
+
+                self.x - self.done_x,
+
+                self.y - self.done_y
+
+            )
+
+            # Back away from the collection area.
+
+            if retreat_dist < 0.55:
+
+                cmd.linear.x = -0.16
+
+            else:
+
+                cmd.linear.x = 0.0
+
+
 
  
 

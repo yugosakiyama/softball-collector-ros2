@@ -163,6 +163,34 @@
               <topic>/camera</topic>
               <visualize>true</visualize>
             </sensor>
+            <!-- ===== Front guard (holds the ball) ===== -->
+            <collision name="guard_back_c">
+              <pose>0.17 0 0.045 0 0 0</pose>
+              <geometry><box><size>0.02 0.18 0.05</size></box></geometry>
+            </collision>
+            <visual name="guard_back_v">
+              <pose>0.17 0 0.045 0 0 0</pose>
+              <geometry><box><size>0.02 0.18 0.05</size></box></geometry>
+              <material><ambient>0.2 0.2 0.8 1</ambient><diffuse>0.2 0.2 0.8 1</diffuse></material>
+            </visual>
+            <collision name="guard_left_c">
+              <pose>0.21 0.08 0.045 0 0 0</pose>
+              <geometry><box><size>0.08 0.02 0.05</size></box></geometry>
+            </collision>
+            <visual name="guard_left_v">
+              <pose>0.21 0.08 0.045 0 0 0</pose>
+              <geometry><box><size>0.08 0.02 0.05</size></box></geometry>
+              <material><ambient>0.2 0.2 0.8 1</ambient><diffuse>0.2 0.2 0.8 1</diffuse></material>
+            </visual>
+            <collision name="guard_right_c">
+              <pose>0.21 -0.08 0.045 0 0 0</pose>
+              <geometry><box><size>0.08 0.02 0.05</size></box></geometry>
+            </collision>
+            <visual name="guard_right_v">
+              <pose>0.21 -0.08 0.045 0 0 0</pose>
+              <geometry><box><size>0.08 0.02 0.05</size></box></geometry>
+              <material><ambient>0.2 0.2 0.8 1</ambient><diffuse>0.2 0.2 0.8 1</diffuse></material>
+            </visual>
           </link>
       
           <!-- Wheel left -->
@@ -360,12 +388,17 @@
           </inertia>
         </inertial>
         <collision name="collision">
-          <geometry><sphere><radius>0.05</radius></sphere></geometry>
+          <geometry>
+            <cylinder>
+              <radius>0.05</radius>
+              <length>0.1</length>
+            </cylinder>
+          </geometry>
           <surface>
             <friction>
               <ode>
-                <mu>2.0</mu>
-                <mu2>2.0</mu2>
+                <mu>0.2</mu>
+                <mu2>0.2</mu2>
               </ode>
             </friction>
           </surface>
