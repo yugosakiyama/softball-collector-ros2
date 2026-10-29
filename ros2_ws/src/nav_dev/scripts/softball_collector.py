@@ -690,11 +690,11 @@ class SoftballCollector(Node):
 
                     cmd.angular.z = clamp(
 
-                        1.5 * e,
+                        1.0 * e,
 
-                        -0.40,
+                        -0.25,
 
-                        0.40
+                        0.25
 
                     )
 
